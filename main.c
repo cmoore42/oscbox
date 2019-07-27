@@ -6,9 +6,11 @@
 #include <termios.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <gpiod.h>
 #include "tinyosc.h"
+#include "i2c.h"
 
 
 #define STATE_IDLE 0
@@ -20,7 +22,11 @@
 #define ESC_END 0xDC
 #define ESC_ESC 0xDD
 
+#define I2C_BUS 0
+#define I2C_ADDR 0x20
+
 int fd;
+int i2c_fd;
 int verbose = 0;
 int state;
 char recv_buffer[46*1024];
@@ -38,6 +44,7 @@ void handle_user_input(void);
 void *recv_func(void *);
 void *gpio_func(void *);
 char *name_to_param(const char *);
+void handle_encoders(uint8_t from, uint8_t to);
 
 struct wheel {
 	int index;
@@ -64,6 +71,12 @@ int main(int argc, char *argv[]) {
 	if ((argc > 1) && (argv[1][1] == 'v')) {
 		verbose = 1;
 	}
+
+	i2c_fd = i2c_open(I2C_BUS, I2C_ADDR);
+	if (i2c_fd < 0) {
+		return 1;
+	}
+	i2c_init(i2c_fd);
 
 	pthread_create(&recv_thread, NULL, recv_func, NULL);
 	pthread_create(&gpio_thread, NULL, gpio_func, NULL);
@@ -186,6 +199,22 @@ void* recv_func(void *ptr) {
 	}
 }
 
+/**
+ * gpio thread
+ * This function is executed in a separate thread.
+ * It monitors the GPIO lines (encoders and buttons)
+ * and responds to changes.
+ *
+ * GPIO6 is connected to the INT line of the I/O 
+ * expander, and the expander is programmed to interrupt
+ * on any line change.
+ *
+ * This function monitors GPIO6 for a falling edge, indicating
+ * an interrupt.  When GPIO6 goes low it sends I2C commands
+ * to read the current state of the encoders and buttons 
+ * and acts accordingly.
+ */
+
 void* gpio_func(void *ptr) {
 	char line[80];
 	char outbuf[1024];
@@ -195,6 +224,8 @@ void* gpio_func(void *ptr) {
 	struct gpiod_line_event event;
 	struct timespec ts = {0, 1000000 };
 	int rv;
+	uint8_t current_encoders;
+	uint8_t previous_encoders;
 
 	chip = gpiod_chip_open("/dev/gpiochip0");
         if (!chip) {
@@ -202,69 +233,25 @@ void* gpio_func(void *ptr) {
                 return NULL;
         }
 
-        gpio_line = gpiod_chip_get_line(chip, 7);
+        gpio_line = gpiod_chip_get_line(chip, 6);
         if (!gpio_line) {
                 perror("gpiod_chip_get_line");
                 gpiod_chip_close(chip);
                 return NULL;
         }
 
-        rv = gpiod_line_request_both_edges_events(gpio_line, "GPIO7");
+        rv = gpiod_line_request_falling_edge_events(gpio_line, "GPIO6");
         if (rv) {
-                perror("gpiod_line_request_rising_edge_events");
+                perror("gpiod_line_request_falling_edge_events");
                 gpiod_chip_close(chip);
                 return NULL;
         }
 
-
+	previous_encoders = i2c_read(i2c_fd, REG_GPIOA);
 
 	/* If there is user input (button, encoder, etc), handle it */
 	while (1) {
-#if USE_STDIN
-		fgets(line, sizeof(line), stdin);
-		line[strlen(line)-1] = '\0';
-		if (strncmp(line, "live", 4) == 0) {
-			outbuf_len = tosc_writeMessage(outbuf, sizeof(outbuf),
-					"/eos/key/live", "");
-			slip_send(outbuf, outbuf_len);
-		} else if (strncmp(line, "sk", 2) == 0) {
-			char cmd[80];
-			strcpy(cmd, "/eos/key/softkey_");
-			strcat(cmd, &(line[2]));
-			outbuf_len = tosc_writeMessage(outbuf, sizeof(outbuf),
-					cmd, "");
-			slip_send(outbuf, outbuf_len);
-		} else if (strncmp(line, "pan", 3) == 0) {
-			char cmd[80];
-			float dir;
-			strcpy(cmd, "/eos/wheel/pan");
-			if (line[3] == '+') {
-				dir = 1.0;
-			} else {
-				dir = -1.0;
-			}
-			outbuf_len = tosc_writeMessage(outbuf, sizeof(outbuf),
-					cmd, "f", dir);
-			slip_send(outbuf, outbuf_len);
-		} else if (strncmp(line, "w", 1) == 0) {
-			char cmd[80];
-			int index;
-			float dir;
 
-			/* /eos/wheel/<param>=1.0 or -1.0 */
-			index = atoi(&(line[2]));
-			strcpy(cmd, "/eos/wheel/");
-			strcat(cmd, wheels[index].param);
-			if (line[1] == '+') {
-				dir = 1.0;
-			} else {
-				dir = -1.0;
-			}
-			outbuf_len = tosc_writeMessage(outbuf, sizeof(outbuf),
-					cmd, "f", dir);
-			slip_send(outbuf, outbuf_len);
-		}
-#else
 		do {
 			rv = gpiod_line_event_wait(gpio_line, &ts);
 		} while (rv <= 0);
@@ -273,15 +260,24 @@ void* gpio_func(void *ptr) {
 		if (!rv) {
 			char cmd[80];
 
-			printf("event: %d timestamp: [%8ld.%09ld]\n",
-					event.event_type, event.ts.tv_sec, event.ts.tv_nsec);
+			if (verbose) {
+				printf("event: %d timestamp: [%8ld.%09ld]\n",
+						event.event_type, event.ts.tv_sec, event.ts.tv_nsec);
+			}
+
+			current_encoders = i2c_read(i2c_fd, REG_GPIOA);
+			if (current_encoders != previous_encoders) {
+				handle_encoders(previous_encoders, current_encoders);
+				previous_encoders = current_encoders;
+			}
+			/*
 			strcpy(cmd, "/eos/wheel/coarse/");
 			strcat(cmd, wheels[1].param);
 			outbuf_len = tosc_writeMessage(outbuf, sizeof(outbuf),
 					cmd, "f", 1.0);
 			slip_send(outbuf, outbuf_len);
+			*/
 		}
-#endif
 	}
 }
 
@@ -410,4 +406,9 @@ char *name_to_param(const char *name) {
 	return result;
 }
 
-
+void handle_encoders(uint8_t from, uint8_t to) {
+	if (verbose) {
+		printf("Encoder change from 0x%02x to 0x%02x\n",
+				from, to);
+	}
+}
