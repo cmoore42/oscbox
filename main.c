@@ -217,8 +217,6 @@ void* recv_func(void *ptr) {
 
 void* gpio_func(void *ptr) {
 	char line[80];
-	char outbuf[1024];
-	int outbuf_len;
 	struct gpiod_chip *chip;
 	struct gpiod_line *gpio_line;
 	struct gpiod_line_event event;
@@ -258,25 +256,25 @@ void* gpio_func(void *ptr) {
 
 		rv = gpiod_line_event_read(gpio_line, &event);
 		if (!rv) {
+			/* Got an interrupt */
 			char cmd[80];
 
+			/*
 			if (verbose) {
 				printf("event: %d timestamp: [%8ld.%09ld]\n",
 						event.event_type, event.ts.tv_sec, event.ts.tv_nsec);
 			}
+			*/
+
+			/* Clear the interrupt */
+			i2c_read(i2c_fd, REG_INTCAPA);
+			i2c_read(i2c_fd, REG_INTCAPB);
 
 			current_encoders = i2c_read(i2c_fd, REG_GPIOA);
 			if (current_encoders != previous_encoders) {
 				handle_encoders(previous_encoders, current_encoders);
 				previous_encoders = current_encoders;
 			}
-			/*
-			strcpy(cmd, "/eos/wheel/coarse/");
-			strcat(cmd, wheels[1].param);
-			outbuf_len = tosc_writeMessage(outbuf, sizeof(outbuf),
-					cmd, "f", 1.0);
-			slip_send(outbuf, outbuf_len);
-			*/
 		}
 	}
 }
@@ -285,7 +283,9 @@ void process_message(tosc_message *msg) {
 	char *address;
 	int index;
 
-	tosc_printMessage(msg);
+	if (verbose) {
+		tosc_printMessage(msg);
+	}
 	tosc_reset(msg);
 	address = tosc_getAddress(msg);
 	if (strncmp(address, "/eos/out/active/wheel", 21) == 0) {
@@ -351,7 +351,9 @@ void open_port() {
 void slip_send(char *text, int len) {
 	char end = END;
 
-	printf("Sending '%s'\n", text);
+	if (verbose) {
+		printf("Sending '%s'\n", text);
+	}
 	write(fd, &end, 1);
 	write(fd, text, len);
 	write(fd, &end, 1);
@@ -407,8 +409,45 @@ char *name_to_param(const char *name) {
 }
 
 void handle_encoders(uint8_t from, uint8_t to) {
+	int bit;
+	char cmd[80];
+	char outbuf[1024];
+	int outbuf_len;
+
+	/*
 	if (verbose) {
 		printf("Encoder change from 0x%02x to 0x%02x\n",
 				from, to);
 	}
+	*/
+
+	for (bit=0; bit<8; bit += 2) {
+		int mask = (1 << bit);
+		if ((from & mask) != (to & mask)) {
+			int a = (to & mask);
+			int b = (to & (mask << 1)) >> 1;
+			int wheel = (bit / 2) + 1;
+			if (verbose) {
+				printf("Encoder %d moved ", wheel);
+				if (a == b) {
+					printf("forward\n");
+				} else {
+					printf("reverse\n");
+				}
+			}
+
+			strcpy(cmd, "/eos/wheel/coarse/");
+			strcat(cmd, wheels[wheel].param);
+			float dir;
+			if (a == b) {
+				dir = 1.0;
+			} else {
+				dir = -1.0;
+			}
+			outbuf_len = tosc_writeMessage(outbuf, sizeof(outbuf),
+					cmd, "f", dir);
+			slip_send(outbuf, outbuf_len);
+		}
+	}
+
 }
