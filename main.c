@@ -25,9 +25,24 @@
 #define I2C_BUS 0
 #define I2C_ADDR 0x20
 
+#define CAT_NONE 0
+#define CAT_INTENSITY 1
+#define CAT_FOCUS 2
+#define CAT_COLOR 3
+#define CAT_IMAGE 4
+#define CAT_FORM 5
+#define CAT_SHUTTER 6
+
+#define MAX_WHEELS 40
+
+static char* category_name[] = {
+	"None", "Intensity", "Focus", "Color",
+	"Image", "Form", "Shutter"};
+
 int fd;
 int i2c_fd;
 int verbose = 0;
+int debug = 0;
 int state;
 char recv_buffer[46*1024];
 int recv_buffer_len;
@@ -50,10 +65,11 @@ struct wheel {
 	int index;
 	char name[40];
 	char param[40];
+	int category;
 	float min;
 	float max;
 	float current;
-} wheels[13];;
+} wheels[MAX_WHEELS+1];
 
 int main(int argc, char *argv[]) {
 	char c;
@@ -62,14 +78,27 @@ int main(int argc, char *argv[]) {
 	int message_len;
 	pthread_t recv_thread;
 	pthread_t gpio_thread;
+	int i;
+
+	for (i=0; i<=MAX_WHEELS; i++) {
+		wheels[i].category = CAT_NONE;
+	}
 
 	open_port();
 	if (fd == -1) {
 		return 1;
 	}
+	if (debug) {
+		printf("Serial port open\n");
+	}
 
 	if ((argc > 1) && (argv[1][1] == 'v')) {
 		verbose = 1;
+	}
+
+	if ((argc > 1) && (argv[1][1] == 'd')) {
+		verbose = 1;
+		debug = 1;
 	}
 
 	i2c_fd = i2c_open(I2C_BUS, I2C_ADDR);
@@ -77,6 +106,13 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 	i2c_init(i2c_fd);
+	if (debug) {
+		printf("I2C initialized\n");
+		printf("I2C registers:\n");
+		for (i=0; i<0x16; i++) {
+			printf("0x%02x: 0x%02x\n", i, i2c_read(i2c_fd, i));
+		}
+	}
 
 	pthread_create(&recv_thread, NULL, recv_func, NULL);
 	pthread_create(&gpio_thread, NULL, gpio_func, NULL);
@@ -259,12 +295,10 @@ void* gpio_func(void *ptr) {
 			/* Got an interrupt */
 			char cmd[80];
 
-			/*
-			if (verbose) {
+			if (debug) {
 				printf("event: %d timestamp: [%8ld.%09ld]\n",
 						event.event_type, event.ts.tv_sec, event.ts.tv_nsec);
 			}
-			*/
 
 			/* Clear the interrupt */
 			i2c_read(i2c_fd, REG_INTCAPA);
@@ -290,15 +324,16 @@ void process_message(tosc_message *msg) {
 	address = tosc_getAddress(msg);
 	if (strncmp(address, "/eos/out/active/wheel", 21) == 0) {
 		const char *name;
-		int value;
+		int category;
 
 		index = atoi(address+22);
 		name = tosc_getNextString(msg);
-		value = tosc_getNextInt32(msg);
+		category = tosc_getNextInt32(msg);
 		strcpy(wheels[index].name, name);
 		strcpy(wheels[index].param, name_to_param(name));
-		printf("==> wheel %d, name \"%s\", param \"%s\", value %d\n",
-				index, name, name_to_param(name), value);
+		wheels[index].category = category;
+		printf("==> wheel %d, name \"%s\", param \"%s\", category %s\n",
+				index, name, name_to_param(name), category_name[category]);
 	} else if (strncmp(address, "/eos/out/softkey", 16) == 0) {
 		index = atoi(address+17);
 		printf("==> softkey %d is named \"%s\"\n", index, tosc_getNextString(msg));
@@ -334,7 +369,6 @@ void open_port() {
 	struct termios options;
 
 	fd = open("/dev/ttyGS0", O_RDWR | O_NOCTTY | O_NONBLOCK);
-	// fd = open("/dev/ttyGS0", O_RDWR | O_NOCTTY );
 	if (fd == -1) {
 		perror("open");
 	} else {
@@ -386,23 +420,27 @@ char *name_to_param(const char *name) {
 				/* ignore it */
 			} else {
 				*dst = '_';
+				++dst;
 			}
 		} else if (*src == '/') {
 			*dst = '\\';
+			++dst;
 			leading = 0;
 		} else {
 			*dst = tolower(*src);
+			++dst;
 			leading = 0;
 		}
 		++src;
-		++dst;
 	}
 
 	*dst = '\0';
-	--dst;
-	while (*dst == '_') {
-		*dst = '\0';
+	if (strlen(result) != 0) {
 		--dst;
+		while (*dst == '_') {
+			*dst = '\0';
+			--dst;
+		}
 	}
 
 	return result;
@@ -414,12 +452,10 @@ void handle_encoders(uint8_t from, uint8_t to) {
 	char outbuf[1024];
 	int outbuf_len;
 
-	/*
-	if (verbose) {
+	if (debug) {
 		printf("Encoder change from 0x%02x to 0x%02x\n",
 				from, to);
 	}
-	*/
 
 	for (bit=0; bit<8; bit += 2) {
 		int mask = (1 << bit);
