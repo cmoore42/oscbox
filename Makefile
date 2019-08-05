@@ -1,5 +1,5 @@
 PROGRAM = oscbox
-OBJS = main.o tinyosc.o i2c.o
+OBJS = main.o tinyosc.o i2c.o display.o
 LIBS = -lpthread -lgpiod
 
 $(PROGRAM):	$(OBJS)
@@ -13,6 +13,9 @@ tinyosc.o:	tinyosc.c
 
 i2c.o:	i2c.c
 	cc -g -c i2c.c
+
+display.o:	display.c
+	cc -g -c display.c
 
 clean:
 	rm -f $(PROGRAM) $(OBJS)
