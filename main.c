@@ -136,7 +136,6 @@ static void add_button(int x0, int y0, int x1, int y1, touch_callback cb, void *
 
 }
 
-
 void set_category(int c) {
 	int wheel_num;
 	int encoder_num;
@@ -170,15 +169,39 @@ void set_category(int c) {
 }
 
 void set_encoder_text(int encoder_num, char *text) {
-	printf("Encoder %d is named %s\n", encoder_num, text);
+	char trimmed_text[80];
+	char value[80];
+	char *tok;
+
+	if (debug) {
+		printf("Encoder %d is named %s\n", encoder_num, text);
+	}
 	clear_encoder_text(encoder_num);
 	int encoder_start_x = 120*encoder_num + 5;
 	int encoder_start_y = 20;
-	disp_string(encoder_start_x, encoder_start_y, text, COLOR_WHITE);
+
+	strcpy(trimmed_text, text);
+	if (tok = strchr(trimmed_text, '[')) {
+		strcpy(value, tok);
+		*tok = '\0';
+	}
+
+	tok = strtok(trimmed_text, " ");
+	while (tok != NULL) {
+		if (debug) {
+			printf("Line: '%s'\n", tok);
+		}
+		disp_string(encoder_start_x, encoder_start_y, tok, COLOR_WHITE);
+		tok = strtok(NULL, " ");
+		encoder_start_y += 20;
+	}
+	disp_string(encoder_start_x, encoder_start_y, value, COLOR_WHITE);
 }
 
 void clear_encoder_text(int encoder_num) {
-	printf("Clear encoder name %d\n", encoder_num);
+	if (debug) {
+		printf("Clear encoder name %d\n", encoder_num);
+	}
 	switch(encoder_num) {
 		case 0:
 			disp_clear_range(0, 0, 118, 118);
