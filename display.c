@@ -19,7 +19,8 @@ int font_width;
 int charsize;
 char *font_rows;
 
-#define FONT_FILENAME "zap-light20.psf"
+// #define FONT_FILENAME "zap-light20.psf"
+#define FONT_FILENAME "Tamzen8x15.psf"
 
 static void load_fonts();
 
@@ -48,7 +49,9 @@ void disp_open() {
                 perror("open /dev/tty1");
 		return;
         }
-        ioctl(tty_fd, KDSETMODE, KD_GRAPHICS);
+        if (ioctl(tty_fd, KDSETMODE, KD_GRAPHICS)) {
+		perror("ioctl KDSETMODE");
+	}
         close(tty_fd);
 
         disp_fd = open("/dev/fb0", O_RDWR);
@@ -206,4 +209,15 @@ int disp_font_height() {
 
 int disp_font_width() {
 	return font_width;
+}
+
+void disp_clear_range(int x0, int y0, int x1, int y1) {
+	int x;
+	int y;
+
+	for (x=x0; x<=x1; x++) {
+		for (y=y0; y<=y1; y++) {
+			disp_point(x, y, 0, 0, 0);
+		}
+	}
 }

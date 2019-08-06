@@ -11,7 +11,7 @@
 #include <gpiod.h>
 #include "tinyosc.h"
 #include "i2c.h"
-
+#include "display.h"
 
 #define STATE_IDLE 0
 #define STATE_INFRAME 1
@@ -58,6 +58,7 @@ void handle_receive(void);
 void handle_user_input(void);
 void *recv_func(void *);
 void *gpio_func(void *);
+void *touch_func(void *);
 char *name_to_param(const char *);
 void handle_encoders(uint8_t from, uint8_t to);
 
@@ -78,6 +79,7 @@ int main(int argc, char *argv[]) {
 	int message_len;
 	pthread_t recv_thread;
 	pthread_t gpio_thread;
+	pthread_t touch_thread;
 	int i;
 
 	for (i=0; i<=MAX_WHEELS; i++) {
@@ -114,13 +116,18 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	disp_open();
+	disp_clear();
+
 	pthread_create(&recv_thread, NULL, recv_func, NULL);
 	pthread_create(&gpio_thread, NULL, gpio_func, NULL);
+	pthread_create(&touch_thread, NULL, touch_func, NULL);
 
 	startup();
 
 	pthread_join(recv_thread, NULL);
 	pthread_join(gpio_thread, NULL);
+	pthread_join(touch_thread, NULL);
 }
 
 void startup() {
@@ -485,5 +492,13 @@ void handle_encoders(uint8_t from, uint8_t to) {
 			slip_send(outbuf, outbuf_len);
 		}
 	}
+
+}
+
+/**
+ * This function processes touches on the touch screen
+ */
+
+void* touch_func(void *ptr) {
 
 }

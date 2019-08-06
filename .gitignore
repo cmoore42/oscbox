@@ -50,3 +50,14 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Project specific
+oscbox
+test/font_test
+test/gpio_sample
+test/i2c_sample
+test/i2c_sample2
+test/tft
+test/tft2
+test/touchscreen
+

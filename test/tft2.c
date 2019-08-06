@@ -3,6 +3,7 @@
 
 int main() {
 	int i;
+	int j;
 	char c;
 
 	disp_open();
@@ -59,9 +60,21 @@ int main() {
 
 	disp_clear();
 	disp_flush();
-	disp_string(30, 30, "Hello world", 0xff, 0xff, 0xff);
+	disp_string(10, 10, "123456789-123456789-123456789-123456789-123456789-", 0xff, 0xff, 0xff);
 	disp_flush();
 	printf("String test done, press enter\n");
+	fgetc(stdin);
+
+	disp_clear();
+	disp_flush();
+	for (i=0; i<480; i+=50) {
+		for (j=0; j<320; j+=50) {
+			disp_line(i-5, j, i+5, j, 255, 255, 255);
+			disp_line(i, j-5, i, j+5, 255, 255, 255);
+		}
+	}
+	disp_flush();
+	printf("Grid done, press enter\n");
 	fgetc(stdin);
 
 	disp_close();

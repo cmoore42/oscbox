@@ -7,6 +7,8 @@
 static char* types[] = {
 	"SYN", "KEY", "REL", "ABS", "MSC", "SW"};
 
+int mapx(int x);
+int mapy(int y);
 
 
 int main() {
@@ -30,6 +32,7 @@ int main() {
 					keydown = event.value;
 					if (event.value == 0) {
 						printf("Touch at %d, %d\n", last_x, last_y);
+						printf("Pixel %d, %d\n", mapx(last_x), mapy(last_y));
 					}
 				}
 				break;
@@ -56,4 +59,18 @@ int main() {
 	}
 }
 
+int mapx(int x) {
+	double slope = -0.12858;
+	double offset = 505.7806;
 
+	double output = (double)x * slope + offset;
+	return (int)output;
+}
+
+int mapy(int y) {
+	double slope = 0.086685;
+	double offset = -18.958;
+
+	double output = (double)y * slope + offset;
+	return (int)output;
+}
