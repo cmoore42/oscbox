@@ -6,6 +6,8 @@
 #include "slip.h"
 #include "eos.h"
 
+extern void update_wheel(int wheel_num);
+
 char* category_name[] = {
 	"None", "Intensity", "Focus", "Color",
 	"Image", "Form", "Shutter"};
@@ -72,6 +74,7 @@ void process_message(tosc_message *msg) {
 		wheels[index].category = category;
 		printf("==> wheel %d, name \"%s\", param \"%s\", category %s\n",
 				index, name, name_to_param(name), category_name[category]);
+		update_wheel(index);
 	} else if (strncmp(address, "/eos/out/softkey", 16) == 0) {
 		index = atoi(address+17);
 		printf("==> softkey %d is named \"%s\"\n", index, tosc_getNextString(msg));

@@ -17,6 +17,7 @@ static void add_button(int x0, int y0, int x1, int y1, touch_callback cb, void *
 void set_category(int category);
 void set_encoder_text(int encoder_num, char *text);
 void clear_encoder_text(int encoder_num);
+void update_wheel(int wheel_num);
 
 int category;
 int encoder_map[NUM_ENCODERS];	// Map of physical encoders to EOS wheels
@@ -142,7 +143,9 @@ void set_category(int c) {
 
 	category = c;
 
-	printf("Category %s\n", category_name[category]);
+	if (debug) {
+		printf("Category %s\n", category_name[category]);
+	}
 
 	encoder_num = 0;
 	for (wheel_num=0; wheel_num <= MAX_WHEELS; wheel_num++) {
@@ -216,4 +219,8 @@ void clear_encoder_text(int encoder_num) {
 			disp_clear_range(360, 0, 479, 118);
 			break;
 	}
+}
+
+void update_wheel(int wheel_num) {
+	set_category(category);
 }
