@@ -6,7 +6,7 @@
 #include "slip.h"
 #include "eos.h"
 
-static char* category_name[] = {
+char* category_name[] = {
 	"None", "Intensity", "Focus", "Color",
 	"Image", "Form", "Shutter"};
 

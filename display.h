@@ -1,6 +1,8 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
+#define COLOR_WHITE 0x1f, 0x3f, 0x1f
+
 void disp_open();
 void disp_close();
 void disp_point(int x, int y, int r, int g, int b);

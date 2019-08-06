@@ -12,6 +12,8 @@
 #define CAT_FORM 5
 #define CAT_SHUTTER 6
 
+extern char* category_name[];
+
 void handle_encoders(uint8_t from, uint8_t to);
 char *name_to_param(const char *name);
 void subscribe(char *param);
