@@ -10,10 +10,16 @@
 #include "eos.h"
 #include "globals.h"
 
+#define NUM_ENCODERS 4	// Number of physical encoder wheels
+
 void startup(void);
 static void add_button(int x0, int y0, int x1, int y1, touch_callback cb, void *arg, char *text);
+void set_category(int category);
+void set_encoder_text(int encoder_num, char *text);
+void clear_encoder_text(int encoder_num);
 
 int category;
+int encoder_map[NUM_ENCODERS];	// Map of physical encoders to EOS wheels
 
 int main(int argc, char *argv[]) {
 	char c;
@@ -38,6 +44,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	category = CAT_NONE;
+	for (i=0; i<NUM_ENCODERS; i++) {
+		encoder_map[i] = -1;
+	}
 
 	open_port();
 	if (slip_fd == -1) {
@@ -69,23 +78,22 @@ void test_cb(void *arg) {
 	int iarg = (int)arg;
 	switch(iarg) {
 		case 1:
-			category = CAT_FOCUS;
+			set_category(CAT_FOCUS);
 			break;
 		case 2:
-			category = CAT_COLOR;
+			set_category(CAT_COLOR);
 			break;
 		case 3:
-			category = CAT_IMAGE;
+			set_category(CAT_IMAGE);
 			break;
 		case 4:
-			category = CAT_FORM;
+			set_category(CAT_FORM);
 			break;
 		case 5:
-			category = CAT_SHUTTER;
+			set_category(CAT_SHUTTER);
 			break;
 	}
 
-	printf("Category %s\n", category_name[category]);
 }
 
 /**
@@ -129,6 +137,60 @@ static void add_button(int x0, int y0, int x1, int y1, touch_callback cb, void *
 }
 
 
+void set_category(int c) {
+	int wheel_num;
+	int encoder_num;
 
+	category = c;
 
+	printf("Category %s\n", category_name[category]);
 
+	encoder_num = 0;
+	for (wheel_num=0; wheel_num <= MAX_WHEELS; wheel_num++) {
+		if (wheels[wheel_num].category == category) {
+			encoder_map[encoder_num] = wheel_num;
+			set_encoder_text(encoder_num, wheels[wheel_num].name);
+			if (debug) {
+				printf("Encoder %d maps to wheel %d\n", encoder_num, wheel_num);
+			}
+			++encoder_num;
+			if (encoder_num >= NUM_ENCODERS) {
+				break;
+			}
+		}
+	}
+
+	while (encoder_num < NUM_ENCODERS) {
+		if (debug) {
+			printf("Encoder %d maps to -1\n", encoder_num);
+		}
+		clear_encoder_text(encoder_num);
+		encoder_map[encoder_num++] = -1;
+	}
+}
+
+void set_encoder_text(int encoder_num, char *text) {
+	printf("Encoder %d is named %s\n", encoder_num, text);
+	clear_encoder_text(encoder_num);
+	int encoder_start_x = 120*encoder_num + 5;
+	int encoder_start_y = 20;
+	disp_string(encoder_start_x, encoder_start_y, text, COLOR_WHITE);
+}
+
+void clear_encoder_text(int encoder_num) {
+	printf("Clear encoder name %d\n", encoder_num);
+	switch(encoder_num) {
+		case 0:
+			disp_clear_range(0, 0, 118, 118);
+			break;
+		case 1:
+			disp_clear_range(120, 0, 238, 118);
+			break;
+		case 2:
+			disp_clear_range(240, 0, 358, 118);
+			break;
+		case 3:
+			disp_clear_range(360, 0, 479, 118);
+			break;
+	}
+}
