@@ -4,14 +4,13 @@
 #include <fcntl.h>
 #include "slip.h"
 #include "eos.h"
+#include "globals.h"
 
 int state;
 int slip_fd;
 char recv_buffer[46*1024];
 int recv_buffer_len;
 
-extern int debug;
-extern int verbose;
 
 void* recv_func(void *ptr) {
 	int n;

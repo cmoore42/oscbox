@@ -3,6 +3,7 @@
 #include "encoders.h"
 #include "eos.h"
 #include "i2c.h"
+#include "globals.h"
 
 /**
  * This file covers input from the encoders and buttons.
@@ -11,7 +12,6 @@
  */
 
 int i2c_fd;
-extern int debug;
 
 
 /**
@@ -74,7 +74,7 @@ void* encoder_func(void *ptr) {
 			/* Got an interrupt */
 			char cmd[80];
 
-			if (debug) {
+			if (verbose) {
 				printf("event: %d timestamp: [%8ld.%09ld]\n",
 						event.event_type, event.ts.tv_sec, event.ts.tv_nsec);
 			}

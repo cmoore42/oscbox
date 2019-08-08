@@ -5,6 +5,7 @@ extern int debug;
 extern int verbose;
 
 #define MAX_WHEELS 40
+#define NUM_ENCODERS 4
 
 struct wheel {
 	int index;
@@ -17,5 +18,6 @@ struct wheel {
 };
 
 extern struct wheel wheels[MAX_WHEELS+1];
+extern int encoder_map[];
 
 #endif

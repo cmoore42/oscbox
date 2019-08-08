@@ -18,7 +18,7 @@ void handle_encoders(uint8_t from, uint8_t to) {
 	char outbuf[1024];
 	int outbuf_len;
 
-	if (debug) {
+	if (verbose) {
 		printf("Encoder change from 0x%02x to 0x%02x\n",
 				from, to);
 	}
@@ -28,9 +28,10 @@ void handle_encoders(uint8_t from, uint8_t to) {
 		if ((from & mask) != (to & mask)) {
 			int a = (to & mask);
 			int b = (to & (mask << 1)) >> 1;
-			int wheel = (bit / 2) + 1;
-			if (verbose) {
-				printf("Encoder %d moved ", wheel);
+			int encoder = 3 - (bit / 2);
+			int wheel = encoder_map[encoder];
+			if (debug) {
+				printf("Encoder %d, wheel %d moved ", encoder, wheel);
 				if (a == b) {
 					printf("forward\n");
 				} else {
@@ -38,17 +39,19 @@ void handle_encoders(uint8_t from, uint8_t to) {
 				}
 			}
 
-			strcpy(cmd, "/eos/wheel/coarse/");
-			strcat(cmd, wheels[wheel].param);
-			float dir;
-			if (a == b) {
-				dir = 1.0;
-			} else {
-				dir = -1.0;
+			if (wheel >= 0) {
+				strcpy(cmd, "/eos/wheel/coarse/");
+				strcat(cmd, wheels[wheel].param);
+				float dir;
+				if (a == b) {
+					dir = 1.0;
+				} else {
+					dir = -1.0;
+				}
+				outbuf_len = tosc_writeMessage(outbuf, sizeof(outbuf),
+						cmd, "f", dir);
+				slip_send(outbuf, outbuf_len);
 			}
-			outbuf_len = tosc_writeMessage(outbuf, sizeof(outbuf),
-					cmd, "f", dir);
-			slip_send(outbuf, outbuf_len);
 		}
 	}
 }

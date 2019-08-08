@@ -10,8 +10,6 @@
 #include "eos.h"
 #include "globals.h"
 
-#define NUM_ENCODERS 4	// Number of physical encoder wheels
-
 void startup(void);
 static void add_button(int x0, int y0, int x1, int y1, touch_callback cb, void *arg, char *text);
 void set_category(int category);
@@ -20,7 +18,6 @@ void clear_encoder_text(int encoder_num);
 void update_wheel(int wheel_num);
 
 int category;
-int encoder_map[NUM_ENCODERS];	// Map of physical encoders to EOS wheels
 
 int main(int argc, char *argv[]) {
 	char c;
@@ -44,7 +41,7 @@ int main(int argc, char *argv[]) {
 		wheels[i].category = CAT_NONE;
 	}
 
-	category = CAT_NONE;
+	category = CAT_COLOR;
 	for (i=0; i<NUM_ENCODERS; i++) {
 		encoder_map[i] = -1;
 	}
