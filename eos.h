@@ -15,6 +15,7 @@
 extern char* category_name[];
 
 void handle_encoders(uint8_t from, uint8_t to);
+void handle_softkey(int sk_num);
 char *name_to_param(const char *name);
 void subscribe(char *param);
 void process_packet(char *buffer, int len);

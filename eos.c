@@ -7,6 +7,7 @@
 #include "eos.h"
 
 extern void update_wheel(int wheel_num);
+extern void set_sk_text(int sk_num, char *text);
 
 char* category_name[] = {
 	"None", "Intensity", "Focus", "Color",
@@ -56,6 +57,16 @@ void handle_encoders(uint8_t from, uint8_t to) {
 	}
 }
 
+void handle_softkey(int sk_num) {
+	char cmd[80];
+	char outbuf[1024];
+	int outbuf_len;
+	
+	sprintf(cmd, "/eos/softkey/%d", sk_num);
+	outbuf_len = tosc_writeMessage(outbuf, sizeof(outbuf), cmd, "");
+	slip_send(outbuf, outbuf_len);
+}
+
 void process_message(tosc_message *msg) {
 	char *address;
 	int index;
@@ -75,12 +86,19 @@ void process_message(tosc_message *msg) {
 		strcpy(wheels[index].name, name);
 		strcpy(wheels[index].param, name_to_param(name));
 		wheels[index].category = category;
-		printf("==> wheel %d, name \"%s\", param \"%s\", category %s\n",
+		if (debug) {
+			printf("==> wheel %d, name \"%s\", param \"%s\", category %s\n",
 				index, name, name_to_param(name), category_name[category]);
+		}
 		update_wheel(index);
 	} else if (strncmp(address, "/eos/out/softkey", 16) == 0) {
+		char name[80];
 		index = atoi(address+17);
-		printf("==> softkey %d is named \"%s\"\n", index, tosc_getNextString(msg));
+		strcpy(name, tosc_getNextString(msg));
+		if (debug) {
+			printf("==> softkey %d is named \"%s\"\n", index, name);
+		}
+		set_sk_text(index, name);
 	}
 
 }

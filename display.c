@@ -1,4 +1,5 @@
 #include "display.h"
+#include "globals.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <linux/fb.h>
@@ -117,9 +118,11 @@ static void load_fonts() {
 		charsize = header2.charsize / font_height;
 	}
 
-	printf("Font height: %d\n", font_height);
-	printf("Font width: %d\n", font_width);
-	printf("Bytes per char: %d\n", charsize * font_height);
+	if (debug) {
+		printf("Font height: %d\n", font_height);
+		printf("Font width: %d\n", font_width);
+		printf("Bytes per char: %d\n", charsize * font_height);
+	}
 
 	font_rows = malloc(num_chars * font_height * charsize);
 	read(font_fd, font_rows, num_chars * font_height);

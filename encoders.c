@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <gpiod.h>
+#include <signal.h>
 #include "encoders.h"
 #include "eos.h"
 #include "i2c.h"
@@ -12,6 +13,7 @@
  */
 
 int i2c_fd;
+void usr1_handler(int sig);
 
 
 /**
@@ -35,10 +37,12 @@ void* encoder_func(void *ptr) {
 	struct gpiod_chip *chip;
 	struct gpiod_line *gpio_line;
 	struct gpiod_line_event event;
-	struct timespec ts = {0, 1000000 };
+	struct timespec ts = {0, 1000000};
 	int rv;
 	uint8_t current_encoders;
 	uint8_t previous_encoders;
+
+	signal(SIGUSR1, usr1_handler);
 
 	chip = gpiod_chip_open("/dev/gpiochip0");
         if (!chip) {
@@ -66,6 +70,9 @@ void* encoder_func(void *ptr) {
 	while (1) {
 
 		do {
+			/* Clear interrupts */
+			i2c_read(i2c_fd, REG_INTCAPA);
+			i2c_read(i2c_fd, REG_INTCAPB);
 			rv = gpiod_line_event_wait(gpio_line, &ts);
 		} while (rv <= 0);
 
@@ -78,10 +85,6 @@ void* encoder_func(void *ptr) {
 				printf("event: %d timestamp: [%8ld.%09ld]\n",
 						event.event_type, event.ts.tv_sec, event.ts.tv_nsec);
 			}
-
-			/* Clear the interrupt */
-			i2c_read(i2c_fd, REG_INTCAPA);
-			i2c_read(i2c_fd, REG_INTCAPB);
 
 			current_encoders = i2c_read(i2c_fd, REG_GPIOA);
 			if (current_encoders != previous_encoders) {
@@ -109,3 +112,12 @@ void encoder_init() {
 		}
 	}
 }
+
+void usr1_handler(int sig) {
+
+	printf("I2C registers:\n");
+	printf("REG_INTCAPA: 0x%02x\n", i2c_read(i2c_fd, REG_INTCAPA));
+	printf("REG_INTCAPB: 0x%02x\n", i2c_read(i2c_fd, REG_INTCAPB));
+	printf("REG_GPIOA: 0x%02x\n", i2c_read(i2c_fd, REG_GPIOA));
+}
+
