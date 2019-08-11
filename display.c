@@ -220,7 +220,7 @@ void disp_clear_range(int x0, int y0, int x1, int y1) {
 
 	for (x=x0; x<=x1; x++) {
 		for (y=y0; y<=y1; y++) {
-			disp_point(x, y, 0, 0, 0);
+			disp_point(x, y, COLOR_BLUE);
 		}
 	}
 }

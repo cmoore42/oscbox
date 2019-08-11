@@ -118,6 +118,7 @@ void startup() {
 	eos_startup();
 
 	/* Frames around encoder text */
+	disp_clear_range(0, 0, 479, ENCODER_WINDOW_SIZE_Y);
 	disp_line(0, ENCODER_WINDOW_SIZE_Y, 479, ENCODER_WINDOW_SIZE_Y, COLOR_WHITE);
 	disp_line(119, 0, 119, ENCODER_WINDOW_SIZE_Y, COLOR_WHITE);
 	disp_line(239, 0, 239, ENCODER_WINDOW_SIZE_Y, COLOR_WHITE);
@@ -165,6 +166,7 @@ static void add_button(int x0, int y0, int x1, int y1, touch_callback cb, void *
 	int center_x = x0 + (x1 - x0) / 2;
 	int center_y = y0 + (y1 - y0) / 2;
 
+	disp_clear_range(x0+1, y0+1, x1-1, y1-1);
 	disp_line(x0, y0, x1, y0, COLOR_WHITE);
 	disp_line(x1, y0, x1, y1, COLOR_WHITE);
 	disp_line(x1, y1, x0, y1, COLOR_WHITE);

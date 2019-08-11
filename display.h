@@ -2,6 +2,8 @@
 #define DISPLAY_H
 
 #define COLOR_WHITE 0x1f, 0x3f, 0x1f
+#define COLOR_BLACK 0x00, 0x00, 0x00
+#define COLOR_BLUE 0x00, 0x00, 0x1f
 
 void disp_open();
 void disp_close();
