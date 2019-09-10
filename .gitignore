@@ -60,4 +60,7 @@ test/i2c_sample2
 test/tft
 test/tft2
 test/touchscreen
+.cproject
+.project
+.settings
 
