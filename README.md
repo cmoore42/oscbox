@@ -12,4 +12,4 @@ I wanted the same, but I wanted four wheels to match the wheels on an Ion consol
 and I wanted the wheels to be multi-function like the console wheels are.
 
 ## Details
-For detailed descriptions of the code, the hardware, and the enclosure, (see the Wiki)[https://github.com/cmoore42/oscbox/wiki]
+For detailed descriptions of the code, the hardware, and the enclosure, [see the Wiki](https://github.com/cmoore42/oscbox/wiki)
