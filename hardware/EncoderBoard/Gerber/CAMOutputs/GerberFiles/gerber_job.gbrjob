@@ -1,0 +1,24 @@
+{
+    "Header": {
+        "Comment": "All values are metric (mm)",
+        "CreationDate": "2019-07-31T03:12:49Z",
+        "GenerationSoftware": {
+            "Application": "EAGLE",
+            "Vendor": "Autodesk",
+            "Version": "9.4.0"
+        },
+        "Part": "Single"
+    },
+    "Overall": {
+        "BoardThickness": 1.57,
+        "LayerNumber": 2,
+        "Name": {
+            "ProjectId": "Encoder Board"
+        },
+        "Owner": "Chrismoore Chrismoore <chrismoore@surewest.net>",
+        "Size": {
+            "X": 165,
+            "Y": 50
+        }
+    }
+}
